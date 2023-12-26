@@ -20,7 +20,7 @@ This task is implementing the below steps
 # STEPS
 
 * Ensure you have ```docker``` command in your machine.
-* Ensure your environment related variables are configured in **ansible/mysql-installation.yml** (https://gitlab.com/fatih-dagli/database-120/-/blob/main/ansible/mysql-installation.yml)
+* Ensure your environment related variables are configured in **ansible/mysql-installation.yml** (https://github.com/fatih-dagli/mysql-installation/blob/main/ansible/mysql-installation.yml)
 
     ```
     vars:
@@ -46,7 +46,7 @@ This task is implementing the below steps
             role: admin
     ```
 
-* Ensure your environment related variables are configured in **docker/send_ssh_keys.sh** (https://gitlab.com/fatih-dagli/database-120/-/blob/main/docker/send_ssh_keys.sh)
+* Ensure your environment related variables are configured in **docker/send_ssh_keys.sh** (https://github.com/fatih-dagli/mysql-installation/blob/main/docker/send_ssh_keys.sh)
 
     * You can use the below commands to encode and decode your mysql hosts' ssh passwords. After you encoded you password, you can use this encoded password in the script.
         ```
@@ -55,7 +55,7 @@ This task is implementing the below steps
         ```
 
 
-* Ensure your environment related variables are configured in **ansible/hosts** (https://gitlab.com/fatih-dagli/database-120/-/blob/main/ansible/hosts)
+* Ensure your environment related variables are configured in **ansible/hosts** (https://github.com/fatih-dagli/mysql-installation/blob/main/ansible/hosts)
 
 
 
