@@ -1,0 +1,39 @@
+---
+- name: Uninstall MySQL, Filebeat, and cron
+  hosts: paas-db-ssd37
+  become: true
+  vars:
+    - mysql_backup_dir: "/opt/mysql/mysql_backup"
+    - cron_backup_script: "/opt/mysql/mysql_backup/mysql_backup.sh"
+
+  tasks:
+    - name: Stop and disable Filebeat service
+      systemd:
+        name: filebeat
+        state: stopped
+        enabled: false
+
+    - name: Uninstall Filebeat
+      apt:
+        name: filebeat
+        state: absent
+
+    - name: Remove Filebeat configuration file
+      file:
+        path: "/etc/filebeat/filebeat.yml"
+        state: absent
+
+    - name: Remove MySQL
+      apt:
+        name: percona-server-mysql-57
+        state: absent
+
+    - name: Remove MySQL backup directory
+      file:
+        path: "{{ mysql_backup_dir }}"
+        state: absent
+
+    - name: Remove MySQL backup script
+      file:
+        path: "{{ cron_backup_script }}"
+        state: absent

@@ -1,0 +1,123 @@
+---
+- name: Configure primary and secondary MySQL servers
+ hosts: paas-db-ssd37
+ become: true
+ vars:
+    - db_host1: db-120-primary-prod-66
+    - db_host2: db-120-secondary-prod-67
+    - replication_user: replication_user
+    - replication_password: replication_password
+    - elasticsearch_host: elasticsearch-server-1
+    - elasticsearch_port: 9200
+    - elasticsearch_username: test
+    - elasticsearch_password: test
+    - mysql_backup_dir: "/opt/mysql/mysql_backup"
+    - cron_backup_script: "/opt/mysql/mysql_backup/mysql_backup.sh"
+    - days_to_keep_backups: 14 
+    - users:
+        monitoring:
+          username: monitoring
+          password: $ecurePassw0rd
+          role: read_only
+        ado:
+          username: ado
+          password: $afe'N1invi$ible
+          role: admin
+
+ tasks:
+    - name: Install Percona server for MySQL 5.7
+      apt:
+        name: percona-server-mysql-57
+        state: present
+
+    - name: Start MySQL server
+      systemd:
+        name: mysql
+        state: started
+
+    - name: Create replication user on primary server
+      mysql_user:
+        name: "{{ replication_user }}"
+        password: "{{ replication_password }}"
+        host: "%"
+        priv: "*.*:REPLICATION SLAVE"
+
+    - name: Get the master server position
+      mysql_replication:
+        mode: get-master-status
+        host: "{{ db_host1 }}"
+        user: "{{ replication_user }}"
+        password: "{{ replication_password }}"
+      register: master_status
+
+    - name: Set up replication on secondary server
+      mysql_replication:
+        mode: change-master-to
+        host: "{{ db_host2 }}"
+        user: "{{ replication_user }}"
+        password: "{{ replication_password }}"
+        master_host: "{{ db_host1 }}"
+        master_port: 3306
+        master_user: "{{ replication_user }}"
+        master_password: "{{ replication_password }}"
+        master_log_file: "{{ master_status.result[0]['File'] }}"
+        master_log_pos: "{{ master_status.result[0]['Position'] }}"
+
+    - name: Create MySQL users
+      mysql_user:
+        name: "{{ item.value.username }}"
+        password: "{{ item.value.password }}"
+        host: "%"
+        priv: "*.*:{{ item.value.role }}"
+      with_dict: "{{ users }}"
+
+    - name: Install Filebeat
+      apt:
+        name: filebeat
+        state: present
+
+    - name: Enable and start Filebeat service
+      systemd:
+        name: filebeat
+        state: started
+        enabled: true
+
+    - name: Configure Filebeat for MySQL logs
+      template:
+        src: /opt/filebeat.yml.j2
+        dest: /etc/filebeat/filebeat.yml
+      notify:
+        - restart filebeat
+
+ handlers:
+    - name: restart filebeat
+      systemd:
+        name: filebeat
+        state: restarted
+
+    - name: Create backup directory if it doesn't exist
+    command: mkdir -p {{ mysql_backup_dir }}
+    args:
+        creates: {{ mysql_backup_dir }}
+
+    - name: Create MySQL backup script
+      blockinfile:
+        path: "{{ cron_backup_script }}"
+        block: |
+          #!/bin/bash
+          mysqldump -u root -p{{ replication_password }} --all-databases > {{ mysql_backup_dir }}/backup.sql
+          if [ $? -eq 0 ]; then
+            echo "MySQL backup completed successfully."
+          else
+            echo "MySQL backup failed."
+          fi
+          find {{ mysql_backup_dir }} -type f -mtime +{{ days_to_keep_backups }} -exec rm -f {} \;
+      mode: '0755'
+
+    - name: Configure crontab for MySQL backup
+      cron:
+        name: "MySQL Backup"
+        minute: 0
+        hour: 3
+        job: "{{ cron_backup_script }}"
+      #when: inventory_hostname == db_host1  

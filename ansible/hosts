@@ -1,0 +1,3 @@
+[paas-db-ssd37]
+10.0.1.10 db-120-primary-prod-66
+10.0.2.20 db-120-secondary-prod-67

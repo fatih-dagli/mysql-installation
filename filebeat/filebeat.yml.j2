@@ -1,0 +1,15 @@
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /var/log/mysql/*.log
+
+output.elasticsearch:
+  hosts:    ["{{ elasticsearch_host }}:{{ elasticsearch_port }}"]
+  protocol: "https"
+  username: "{{ elasticsearch_username }}"
+  password: "{{ elasticsearch_password }}"
+
+filebeat.config.modules:
+ path: ${path.config}/modules.d/*.yml
+ reload.enabled: false
